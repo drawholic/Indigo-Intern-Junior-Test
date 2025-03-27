@@ -4,6 +4,19 @@
 #include <random>
 #include <time.h>
 
+#include <unordered_set>
+#include <bitset>
+#include <list>
+
+using namespace std;
+
+// bitset requires compile-time alllcation with provided size or value;
+const unsigned BITSET_MAX = 65536;
+
+void get_binary_state(vector<vector<bool>>& v, bitset<BITSET_MAX>& state);
+
+void toggle_binary(bitset<BITSET_MAX>& state, uint32_t y_pos, uint32_t x_pos, uint32_t y_length, uint32_t x_length);
+
 /*
 You are given a locked container represented as a two-dimensional grid of boolean values (true = locked, false = unlocked). 
 Your task is to write an algorithm that fully unlocks the box, i.e., 
@@ -100,6 +113,13 @@ private:
     }
 };
 
+struct Cell
+{
+    uint32_t y;
+    uint32_t x;
+    Cell(uint32_t _y, uint32_t _x): y(_y), x(_x){}
+};
+
 //================================================================================
 // Function: openBox
 // Description: Your task is to implement this function to unlock the SecureBox.
@@ -108,46 +128,89 @@ private:
 //              all values in the box 'false'. The function should return false if
 //              the box is successfully unlocked, or true if any cell remains locked.
 //================================================================================
-// bool openBox(uint32_t y, uint32_t x)
-// {
-//     SecureBox box(y, x);
-
-//     // PLEASE, PROVIDE YOUR SOLUTION HERE
-//     // ...
-
-//     return box.isLocked();
-// }
-
-using namespace std;
-
-#include <iostream>
-#include <vector>
-#include <queue>
-#include <unordered_set>
-#include <bitset>
-
-const unsigned BITSET_MAX = 1000000;
-
-void print(std::vector<std::vector<bool>> v)
+bool openBox(uint32_t y, uint32_t x)
 {
-    cout << "Print vector\n";
-    for(unsigned i = 0; i < v.size(); i++)
+    SecureBox box(y, x);
+
+    vector<vector<bool>> state = box.getState();
+ 
+    bitset<BITSET_MAX> binary_state;
+
+
+    get_binary_state(state, binary_state);
+
+    unordered_set<bitset<BITSET_MAX>> visited;
+    list<Cell> steps;
+ 
+    visited.insert(binary_state);
+
+    // Brute-force on every possible state until there is a 0 state 
+    while(!binary_state.none())
     {
-        for(unsigned j = 0; j < v[0].size(); j++)
+
+        for(uint32_t i = 0; i < y; i++)
         {
-            if(v[i][j])
+            for(uint32_t j = 0; j < x; j++)
             {
-                std::cout << "1";
-            }else{
-                std::cout << "0";
+
+                // Operate on 1s only 
+                if(binary_state.test(i * x + j))
+                { 
+                    toggle_binary(binary_state, i, j, y, x); 
+
+                    // Check to add only non met toggles
+                    if(!visited.count(binary_state))
+                    {    
+                        visited.insert(binary_state);
+                        steps.push_back({i, j});
+
+                    }else{ 
+                         toggle_binary(binary_state, i, j, y, x);
+                    };
+        
+                
+                }
             };
-            std::cout << "|";
-        };  
-        std::cout << std::endl;
+        }
     };
 
-};
+    /** Apply all found steps. 
+     * Might as well provide a map to check for duplicates of steps,
+     * then in the sequence of abcd...xyzd... it is possible 
+     * to remove every steps between two d elements including 
+     * the new one without losing any result affecting steps. 
+     */
 
+    for(auto i : steps)
+    {
+        box.toggle(i.y, i.x);
+    }; 
+
+    return box.isLocked();
+}
+
+
+int main(int argc, char* argv[])
+{
+    uint32_t y = std::atol(argv[1]);
+    uint32_t x = std::atol(argv[2]);
+    bool state = openBox(y, x);
+
+    if (state)
+        std::cout << "BOX: LOCKED!" << std::endl;
+    else
+        std::cout << "BOX: OPENED!" << std::endl;
+
+    return state; 
+}
+
+/**
+ * 
+ * 
+ * 
+ * 
+ * 
+ */
 void get_binary_state(vector<vector<bool>>& v, bitset<BITSET_MAX>& state)
 {
 
@@ -167,171 +230,11 @@ void toggle_binary(bitset<BITSET_MAX>& state, uint32_t y_pos, uint32_t x_pos, ui
 {
     for (uint32_t i = 0; i < y_length; i++)
     {
-        state.flip(i * x_length + x_pos);  // Toggle column
+        state.flip(i * y_length + x_pos);  
     }
     for (uint32_t j = 0; j < x_length; j++)
     {
-        state.flip(y_pos * x_length + j);  // Toggle row
+        state.flip(y_pos * y_length + j);
     }
-    state.flip(y_pos * x_length + x_pos);  // Toggle itself
-}
-
-
-struct Cell
-{
-    uint32_t y;
-    uint32_t x;
-};
-
-void print_binary(bitset<BITSET_MAX> state, uint32_t y, uint32_t x)
-{
-    cout << "Print bitset\n";
-    for(uint32_t i = 0; i < y; i++)
-    {
-        for(uint32_t j = 0; j < x; j++)
-        {
-            if(state.test(i*y + j))
-            {
-                cout << 1;
-            }else{
-                cout << 0;
-            };
-            cout << "|";
-        };
-        cout << endl;
-    }
-
-}
-
-void test(uint32_t y, uint32_t x)
-{
-    SecureBox box(y, x);
-
-    vector<vector<bool>> state = box.getState();
-
-    bitset<BITSET_MAX> binary_state;
-    get_binary_state(state, binary_state);
-
-
-    print(state);
-    
-    print_binary(binary_state, y, x);
-
-    box.toggle(0,1);
-    state = box.getState();
-    box.toggle(0,1);
-    state = box.getState();
-
-    toggle_binary(binary_state, 0, 1, y, x);
-    toggle_binary(binary_state, 0, 1, y, x);
-
-
-    print(state);
-    print_binary(binary_state, y, x);
-
-    // cout << "Here\n" << state[state.size()-1][state[0].size()-1];
-        
-
-    bool res = true;
-
-    for(uint32_t i = 0; i < y; i++)
-    {
-        for(uint32_t j = 0; j < x; j++)
-        {
-            if(state[i][j] == binary_state.test(i*y + j))
-            {
-                res &= true;
-            }else{
-                cout << "Not equal at " << i << ", " << j << endl;
-            }
-        };
-    };
-    
-
-};
-
-bool openBox(uint32_t y, uint32_t x)
-{
-    SecureBox box(y, x);
-
-    vector<vector<bool>> state = box.getState();
-
-    bitset<BITSET_MAX> binary_state;
-    get_binary_state(state, binary_state);
-
-   
-    queue<bitset<BITSET_MAX>> states;
-    unordered_set<bitset<BITSET_MAX>> visited;
-    
-
-    // test(y, x);
-
-    states.push(binary_state);
-    visited.insert(binary_state);
-
-    uint32_t tries = 0;
-
-    bool equal = true;
-    while(!binary_state.none())
-    {
-        tries++;
-
-        if(binary_state.none())
-        {
-            break;
-        } 
-
-        for(uint32_t i = 0; i < y; i++)
-        {
-            for(uint32_t j = 0; j < x; j++)
-            {
-                if(binary_state.test(i * x + j))
-                {
-                    if(state[i][j] == binary_state.test(i*y +j))
-                    {
-                        equal &= true;
-                    }else{
-                        cout << "Not equal at " << j << ", " << i <<endl;
-                    }
-                     box.toggle(i, j);
-
-                     state = box.getState();
-                     get_binary_state(state, binary_state);
-
-                    if(!visited.count(binary_state)){
-                        visited.insert(binary_state);
-                        // states.push(binary_state);
-                    }else{
-                        box.toggle(i, j);
-                        state = box.getState();
-                        get_binary_state(state, binary_state);
-
-                    }
-                
-                }
-               
-            };
-        }
-    };
-
-
-    std::cout << tries << " tries\n";
-
-    print(state);
-    return box.isLocked();
-}
-
-
-int main(int argc, char* argv[])
-{
-    uint32_t y = std::atol(argv[1]);
-    uint32_t x = std::atol(argv[2]);
-    bool state = openBox(y, x);
-
-    if (state)
-        std::cout << "BOX: LOCKED!" << std::endl;
-    else
-        std::cout << "BOX: OPENED!" << std::endl;
-
-    return state; 
+    state.flip(y_pos * y_length + x_pos); 
 }
