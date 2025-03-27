@@ -130,6 +130,7 @@ const unsigned BITSET_MAX = 1000000;
 
 void print(std::vector<std::vector<bool>> v)
 {
+    cout << "Print vector\n";
     for(unsigned i = 0; i < v.size(); i++)
     {
         for(unsigned j = 0; j < v[0].size(); j++)
@@ -157,7 +158,7 @@ void get_binary_state(vector<vector<bool>>& v, bitset<BITSET_MAX>& state)
     {
         for(unsigned j = 0; j < x; j++)
         {
-            state.set(j * y + i, v[i][j]);
+            state.set(i * x + j, v[i][j]);
         };
     };
 };
@@ -166,13 +167,13 @@ void toggle_binary(bitset<BITSET_MAX>& state, uint32_t y_pos, uint32_t x_pos, ui
 {
     for (uint32_t i = 0; i < y_length; i++)
     {
-        state.flip(x_pos * y_length + i);  // Toggle column
+        state.flip(i * x_length + x_pos);  // Toggle column
     }
     for (uint32_t j = 0; j < x_length; j++)
     {
-        state.flip(j * y_length + y_pos);  // Toggle row
+        state.flip(y_pos * x_length + j);  // Toggle row
     }
-    state.flip(x_pos * y_length + y_pos);  // Toggle itself
+    state.flip(y_pos * x_length + x_pos);  // Toggle itself
 }
 
 
@@ -180,6 +181,73 @@ struct Cell
 {
     uint32_t y;
     uint32_t x;
+};
+
+void print_binary(bitset<BITSET_MAX> state, uint32_t y, uint32_t x)
+{
+    cout << "Print bitset\n";
+    for(uint32_t i = 0; i < y; i++)
+    {
+        for(uint32_t j = 0; j < x; j++)
+        {
+            if(state.test(i*y + j))
+            {
+                cout << 1;
+            }else{
+                cout << 0;
+            };
+            cout << "|";
+        };
+        cout << endl;
+    }
+
+}
+
+void test(uint32_t y, uint32_t x)
+{
+    SecureBox box(y, x);
+
+    vector<vector<bool>> state = box.getState();
+
+    bitset<BITSET_MAX> binary_state;
+    get_binary_state(state, binary_state);
+
+
+    print(state);
+    
+    print_binary(binary_state, y, x);
+
+    box.toggle(0,1);
+    state = box.getState();
+    box.toggle(0,1);
+    state = box.getState();
+
+    toggle_binary(binary_state, 0, 1, y, x);
+    toggle_binary(binary_state, 0, 1, y, x);
+
+
+    print(state);
+    print_binary(binary_state, y, x);
+
+    // cout << "Here\n" << state[state.size()-1][state[0].size()-1];
+        
+
+    bool res = true;
+
+    for(uint32_t i = 0; i < y; i++)
+    {
+        for(uint32_t j = 0; j < x; j++)
+        {
+            if(state[i][j] == binary_state.test(i*y + j))
+            {
+                res &= true;
+            }else{
+                cout << "Not equal at " << i << ", " << j << endl;
+            }
+        };
+    };
+    
+
 };
 
 bool openBox(uint32_t y, uint32_t x)
@@ -191,20 +259,22 @@ bool openBox(uint32_t y, uint32_t x)
     bitset<BITSET_MAX> binary_state;
     get_binary_state(state, binary_state);
 
+   
     queue<bitset<BITSET_MAX>> states;
     unordered_set<bitset<BITSET_MAX>> visited;
     
+
+    // test(y, x);
 
     states.push(binary_state);
     visited.insert(binary_state);
 
     uint32_t tries = 0;
 
-    while(binary_state.none() ||  !states.empty())
+    bool equal = true;
+    while(!binary_state.none())
     {
         tries++;
-        binary_state = states.front();
-        states.pop();
 
         if(binary_state.none())
         {
@@ -215,8 +285,14 @@ bool openBox(uint32_t y, uint32_t x)
         {
             for(uint32_t j = 0; j < x; j++)
             {
-                if(binary_state.test(i * y + j))
+                if(binary_state.test(i * x + j))
                 {
+                    if(state[i][j] == binary_state.test(i*y +j))
+                    {
+                        equal &= true;
+                    }else{
+                        cout << "Not equal at " << j << ", " << i <<endl;
+                    }
                      box.toggle(i, j);
 
                      state = box.getState();
@@ -224,7 +300,7 @@ bool openBox(uint32_t y, uint32_t x)
 
                     if(!visited.count(binary_state)){
                         visited.insert(binary_state);
-                        states.push(binary_state);
+                        // states.push(binary_state);
                     }else{
                         box.toggle(i, j);
                         state = box.getState();
