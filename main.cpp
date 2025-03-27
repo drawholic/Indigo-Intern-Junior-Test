@@ -136,15 +136,20 @@ bool openBox(uint32_t y, uint32_t x)
  
     bitset<BITSET_MAX> binary_state;
 
-
     get_binary_state(state, binary_state);
 
+
+    // Set to check if the state has been met before. 
     unordered_set<bitset<BITSET_MAX>> visited;
+
+    // List to save toggle actions on provided matrix
     list<Cell> steps;
  
+    // Inserted start state of the provided matrix 
     visited.insert(binary_state);
-
+    
     // Brute-force on every possible state until there is a 0 state 
+
     while(!binary_state.none())
     {
 
@@ -165,6 +170,9 @@ bool openBox(uint32_t y, uint32_t x)
                         steps.push_back({i, j});
 
                     }else{ 
+                        
+                        // Probably std::find() call needed to delete all elements from the last occurence until current
+                        // still, dont want to call std::find every time. Every time it's steps.size() * while counter operations in worst case
                          toggle_binary(binary_state, i, j, y, x);
                     };
         
@@ -174,7 +182,8 @@ bool openBox(uint32_t y, uint32_t x)
         }
     };
 
-    /** Apply all found steps. 
+    /** 
+     * Apply all found steps. 
      * Might as well provide a map to check for duplicates of steps,
      * then in the sequence of abcd...xyzd... it is possible 
      * to remove every steps between two d elements including 
@@ -205,11 +214,7 @@ int main(int argc, char* argv[])
 }
 
 /**
- * 
- * 
- * 
- * 
- * 
+ * Converts the vector<vector<bool>> returned by SecureBox::getState method to bitset
  */
 void get_binary_state(vector<vector<bool>>& v, bitset<BITSET_MAX>& state)
 {
@@ -226,6 +231,10 @@ void get_binary_state(vector<vector<bool>>& v, bitset<BITSET_MAX>& state)
     };
 };
 
+/** 
+ * Binary version of SecureBox::toggle(uint32_t, uint32_t) method, 
+ * to inverse the values of column x_pos and row y_pos of the matrix of size y_length*x_length
+ */
 void toggle_binary(bitset<BITSET_MAX>& state, uint32_t y_pos, uint32_t x_pos, uint32_t y_length, uint32_t x_length)
 {
     for (uint32_t i = 0; i < y_length; i++)
