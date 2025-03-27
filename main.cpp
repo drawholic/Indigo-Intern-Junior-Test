@@ -157,24 +157,30 @@ void get_binary_state(vector<vector<bool>>& v, bitset<BITSET_MAX>& state)
     {
         for(unsigned j = 0; j < x; j++)
         {
-            state.set(i * x +j, v[i][j]);
+            state.set(j * y + i, v[i][j]);
         };
     };
 };
 
 void toggle_binary(bitset<BITSET_MAX>& state, uint32_t y_pos, uint32_t x_pos, uint32_t y_length, uint32_t x_length)
 {
-    for(uint32_t i = 0; i < y_length; i++)
+    for (uint32_t i = 0; i < y_length; i++)
     {
-        for(uint32_t j = 0; j < x_length; j++)
-        {   
-            state.flip(y_length * i + x_pos);
-            state.flip(x_length * j + y_pos);
-        };
+        state.flip(x_pos * y_length + i);  // Toggle column
     }
-    state.flip(y_length * y_pos + x_pos);
-};
+    for (uint32_t j = 0; j < x_length; j++)
+    {
+        state.flip(j * y_length + y_pos);  // Toggle row
+    }
+    state.flip(x_pos * y_length + y_pos);  // Toggle itself
+}
 
+
+struct Cell
+{
+    uint32_t y;
+    uint32_t x;
+};
 
 bool openBox(uint32_t y, uint32_t x)
 {
@@ -209,7 +215,7 @@ bool openBox(uint32_t y, uint32_t x)
         {
             for(uint32_t j = 0; j < x; j++)
             {
-                if(state[i][j])
+                if(binary_state.test(i * y + j))
                 {
                      box.toggle(i, j);
 
