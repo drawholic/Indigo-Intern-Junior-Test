@@ -239,11 +239,12 @@ void toggle_binary(bitset<BITSET_MAX>& state, uint32_t y_pos, uint32_t x_pos, ui
 {
     for (uint32_t i = 0; i < y_length; i++)
     {
-        state.flip(i * y_length + x_pos);  
+        state.flip(i * x_length + x_pos);  
+
     }
     for (uint32_t j = 0; j < x_length; j++)
     {
-        state.flip(y_pos * y_length + j);
+        state.flip(y_pos * x_length + j);
     }
-    state.flip(y_pos * y_length + x_pos); 
+    state.flip(y_pos * x_length + x_pos); 
 }
