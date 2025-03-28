@@ -176,7 +176,6 @@ bool openBox(uint32_t y, uint32_t x)
      * an upper triangular matrix which is then used to solve the system. 
      * The resulting vector A is then used to determine the operations needed
      * to solve the system. 
-     * 
      */
     // Solve T * b = A using Gaussian elimination 
     for (uint32_t col = 0, row = 0; col < size && row < size; col++) {
