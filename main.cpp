@@ -131,73 +131,95 @@ struct Cell
 bool openBox(uint32_t y, uint32_t x)
 {
     SecureBox box(y, x);
-
     vector<vector<bool>> state = box.getState();
- 
-    bitset<BITSET_MAX> binary_state;
-
-    get_binary_state(state, binary_state);
-
-
-    // Set to check if the state has been met before. 
-    unordered_set<bitset<BITSET_MAX>> visited;
-
-    // List to save toggle actions on provided matrix
-    list<Cell> steps;
- 
-    // Inserted start state of the provided matrix 
-    visited.insert(binary_state);
+    uint32_t size = y * x;
+    vector<vector<int>> T(size, vector<int>(size, 0));
+    vector<int> A(size, 0);
     
-    // Brute-force on every possible state until there is a 0 state 
-
-    while(!binary_state.none())
-    {
-
-        for(uint32_t i = 0; i < y; i++)
-        {
-            for(uint32_t j = 0; j < x; j++)
-            {
-
-                // Operate on 1s only 
-                if(binary_state.test(i * x + j))
-                { 
-                    toggle_binary(binary_state, i, j, y, x); 
-
-                    // Check to add only non met toggles
-                    if(!visited.count(binary_state))
-                    {    
-                        visited.insert(binary_state);
-                        steps.push_back({i, j});
-
-                    }else{ 
-                        
-                        // Probably std::find() call needed to delete all elements from the last occurence until current
-                        // still, dont want to call std::find every time. Every time it's steps.size() * while counter operations in worst case
-                         toggle_binary(binary_state, i, j, y, x);
-                    };
-        
-                
-                }
-            };
-        }
-    };
-
-    /** 
-     * Apply all found steps. 
-     * Might as well provide a map to check for duplicates of steps,
-     * then in the sequence of abcd...xyzd... it is possible 
-     * to remove every steps between two d elements including 
-     * the new one without losing any result affecting steps. 
+    /**
+     * T is an adjacency matrix to represent relationships between each node (cell), 
+     * i.e. effect of toggle on a node. So the size of the matrix is number of elements * number_of_elements
+     * T is a matrix from equation T*B = A, whereas A is original state matrix provided by the SecureBox::getState()
+     *
+     * Iterating over whole matrix 
      */
+    for (uint32_t i = 0; i < y; i++) {
+        for (uint32_t j = 0; j < x; j++) {
 
-    for(auto i : steps)
-    {
-        box.toggle(i.y, i.x);
-    }; 
+            // Index of the row representing relationship with all other cells 
+            uint32_t idx = i * x + j;
+            
+            // Set 1s for elements in the same column with the cell
+            for (uint32_t k = 0; k < x; k++)
+                T[idx][i * x + k] = 1;
+            
+            // Set 1s for elements in the same row with the cell
+            for (uint32_t k = 0; k < y; k++)
+                T[idx][k * x + j] = 1;
+            
+            // Diagonal of the matrix is all 1s as the relationship
+            // between node with itself is always true
+            T[idx][idx] = 1;
+        }
+    }
+    
+    // Flatten initial state
+    for (uint32_t i = 0; i < y; i++) {
+        for (uint32_t j = 0; j < x; j++) {
+            A[i * x + j] = state[i][j];
+        }
+    }
+    
 
+    /**
+     * Gaussian elimination is a method of solving linear systems by building 
+     * an upper triangular matrix which is then used to solve the system. 
+     * The resulting vector A is then used to determine the operations needed
+     * to solve the system. 
+     * 
+     */
+    // Solve T * b = A using Gaussian elimination 
+    for (uint32_t col = 0, row = 0; col < size && row < size; col++) {
+        uint32_t pivot = row;
+
+        // Finds the pivot, i.e. the row with leading 1 which is also called a coefficient
+        while (pivot < size && !T[pivot][col])
+            pivot++;
+
+        // No 1 was found in the column
+        if (pivot == size) continue;
+        
+
+        // Swapping the rows for moving the row with leading coefficient 1 above
+        swap(T[row], T[pivot]);
+        swap(A[row], A[pivot]);
+        
+
+        // Flipping the rows to turn the leading ones into zeroes
+        for (uint32_t i = 0; i < size; i++) {
+
+            // Check the i is not the same row and there are ones in the column in the others rows
+            if (i != row && T[i][col]) {
+
+                // XOR operation of found row on all the others
+                for (uint32_t j = 0; j < size; j++)
+                    T[i][j] ^= T[row][j];
+
+                // XOR the augmented matrix
+                A[i] ^= A[row];
+            }
+        }
+        row++;
+    }
+    
+    // Apply toggles
+    for (uint32_t i = 0; i < size; i++) {
+        if (A[i])
+            box.toggle(i / x, i % x);
+    }
+    
     return box.isLocked();
 }
-
 
 int main(int argc, char* argv[])
 {
